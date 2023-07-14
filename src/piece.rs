@@ -31,7 +31,7 @@ impl Display for Piece {
             f,
             "{}{}{}",
             color::Fg(color),
-            self.get_symbol(),
+            self.get_unicode(),
             color::Fg(color::Reset)
         )
     }

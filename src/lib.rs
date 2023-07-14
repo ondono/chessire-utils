@@ -10,11 +10,13 @@ use anyhow::*;
 pub mod board;
 pub mod castling;
 pub mod color;
+pub mod moves;
 pub mod piece;
 
 use board::*;
 use castling::*;
 use color::Color::{self, Black, White};
+use piece::Piece;
 
 #[derive(Clone)]
 pub struct ChessGame {
@@ -47,6 +49,8 @@ impl Display for ChessGame {
         writeln!(f, "Castling rights:{}", self.castling_rights)?;
         if let Some(en_passant) = self.enpassant_target_square {
             writeln!(f, "en passant square:{}", en_passant)?;
+        } else {
+            writeln!(f, "en passant square: None")?;
         }
         writeln!(
             f,
@@ -74,6 +78,10 @@ impl ChessGame {
         let mut game = Self::new_empty_board();
         game.apply_fen(fen)?;
         Ok(game)
+    }
+
+    pub fn clear(&mut self) {
+        self.board.clear();
     }
 
     pub fn apply_fen(&mut self, fen: &str) -> Result<(), anyhow::Error> {
@@ -144,5 +152,9 @@ impl ChessGame {
 
     fn set_start_position(&mut self) {
         self.apply_fen(STARTING_FEN).ok();
+    }
+
+    pub fn set_piece(&mut self, coord: Coord, piece: Piece) {
+        self.board[coord] = Some(piece);
     }
 }

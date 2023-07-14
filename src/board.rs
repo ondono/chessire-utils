@@ -18,7 +18,7 @@ use std::fmt;
 
 pub type Tile = usize;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Coord {
     file: usize,
     rank: usize,
@@ -26,7 +26,7 @@ pub struct Coord {
 
 #[inline(always)]
 fn to_char(num: usize) -> char {
-    (num as u8 + b'A').to_ascii_uppercase() as char
+    (num as u8 + b'a').to_ascii_lowercase() as char
 }
 
 impl Coord {
@@ -39,8 +39,50 @@ impl Coord {
             rank: t / 8,
         }
     }
-    pub fn to_usize(self) -> usize {
+    pub fn to_usize(&self) -> usize {
         self.file + self.rank * 8
+    }
+    pub fn next_up(&self) -> Option<Self> {
+        if self.rank < 7 {
+            Some(Self::new(self.file, self.rank + 1))
+        } else {
+            None
+        }
+    }
+    pub fn next_down(&self) -> Option<Self> {
+        if self.rank > 0 {
+            Some(Self::new(self.file, self.rank - 1))
+        } else {
+            None
+        }
+    }
+    pub fn next_left(&self) -> Option<Self> {
+        if self.file > 0 {
+            Some(Self::new(self.file - 1, self.rank))
+        } else {
+            None
+        }
+    }
+    pub fn next_right(&self) -> Option<Self> {
+        if self.file < 7 {
+            Some(Self::new(self.file + 1, self.rank))
+        } else {
+            None
+        }
+    }
+}
+
+use std::str::FromStr;
+
+impl FromStr for Coord {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, anyhow::Error> {
+        let file = (s.chars().nth(0).unwrap().to_ascii_lowercase() as u8) - b'a';
+        let rank = (s.chars().nth(1).unwrap().to_ascii_lowercase() as u8) - b'0' - 1;
+
+        let coord = Coord::new(file.into(), rank.into());
+        Ok(coord)
     }
 }
 
@@ -50,6 +92,133 @@ impl fmt::Display for Coord {
     }
 }
 
+#[cfg(test)]
+mod coord_tests {
+    use crate::*;
+
+    #[test]
+    fn test_parsing() {
+        let valid_coords = ["a1", "b2", "c3", "d4", "e5", "f6", "g7", "h8"];
+
+        for c in valid_coords {
+            assert_eq!(c, c.parse::<Coord>().unwrap().to_string())
+        }
+    }
+
+    #[test]
+    fn test_up() {
+        let valid_names_up = ["a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8"];
+
+        // direct instantiation
+        for (i, name) in valid_names_up.iter().enumerate() {
+            let coord = Coord::new(0, i);
+            assert_eq!(coord.to_string(), *name);
+        }
+        // through next_up
+        let mut coord = Coord::new(0, 0);
+        let mut index = 0;
+        loop {
+            coord = if coord.next_up().is_some() {
+                assert_eq!(coord.to_string(), valid_names_up[index]);
+                println!("{}", coord);
+                index += 1;
+                coord.next_up().unwrap()
+            } else {
+                break;
+            }
+        }
+        // test upper bound
+        for i in 0..8 {
+            let coord = Coord::new(i, 8);
+            assert_eq!(coord.next_up(), None);
+        }
+    }
+    #[test]
+    fn test_right() {
+        let valid_names_right = ["a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8"];
+
+        // direct instantiation
+        for (i, name) in valid_names_right.iter().enumerate() {
+            let coord = Coord::new(i, 7);
+            assert_eq!(coord.to_string(), *name);
+        }
+        // through next_up
+        let mut coord = Coord::new(0, 7);
+        let mut index = 0;
+        loop {
+            coord = if coord.next_right().is_some() {
+                assert_eq!(coord.to_string(), valid_names_right[index]);
+                println!("{}", coord);
+                index += 1;
+                coord.next_right().unwrap()
+            } else {
+                break;
+            }
+        }
+        // test right bound
+        for i in 0..8 {
+            let coord = Coord::new(8, i);
+            assert_eq!(coord.next_right(), None);
+        }
+    }
+
+    #[test]
+    fn test_down() {
+        let valid_names_down = ["h8", "h7", "h6", "h5", "h4", "h3", "h2", "h1"];
+
+        // direct instantiation
+        for (i, name) in valid_names_down.iter().rev().enumerate() {
+            let coord = Coord::new(7, i);
+            assert_eq!(coord.to_string(), *name);
+        }
+        // through next_up
+        let mut coord = Coord::new(0, 0);
+        let mut index = 0;
+        loop {
+            coord = if coord.next_down().is_some() {
+                assert_eq!(coord.to_string(), valid_names_down[index]);
+                println!("{}", coord);
+                index += 1;
+                coord.next_down().unwrap()
+            } else {
+                break;
+            }
+        }
+        // test down bound
+        for i in 0..8 {
+            let coord = Coord::new(i, 0);
+            assert_eq!(coord.next_down(), None);
+        }
+    }
+    #[test]
+    fn test_left() {
+        let valid_names_left = ["h1", "g1", "f1", "e1", "d1", "c1", "b1", "a1"];
+
+        // direct instantiation
+        for (i, name) in valid_names_left.iter().rev().enumerate() {
+            let coord = Coord::new(i, 0);
+            assert_eq!(coord.to_string(), *name);
+        }
+        // through next_up
+        let mut coord = Coord::new(0, 0);
+        let mut index = 0;
+        loop {
+            coord = if coord.next_left().is_some() {
+                assert_eq!(coord.to_string(), valid_names_left[index]);
+                println!("{}", coord);
+                index += 1;
+                coord.next_left().unwrap()
+            } else {
+                break;
+            }
+        }
+        // test left bound
+        for i in 0..8 {
+            let coord = Coord::new(0, i);
+            assert_eq!(coord.next_left(), None);
+        }
+    }
+}
 /***************
 ** Selections **
 ****************/
@@ -83,8 +252,7 @@ impl fmt::Display for Selection {
         for sq in &self.squares {
             write!(f, "{}", sq)?;
         }
-        //TODO: this looks like a crap solution for this, but Ok(()) keeps failing
-        write!(f, "")
+        fmt::Result::Ok(())
     }
 }
 
@@ -190,9 +358,21 @@ impl Board {
         self.selections.clear();
     }
 }
+#[cfg(test)]
+mod tests {
+    use crate::board::*;
+    #[test]
+    fn test_clear_board() {
+        let mut b = Board::new();
+        b.clear();
+        for sq in b.squares {
+            assert!(sq == None);
+        }
+    }
+    // test fen strings
+}
 
 use termion::color;
-
 impl fmt::Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // print the board from white's perspective
